@@ -1,10 +1,11 @@
-﻿import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-
+﻿// app/api/transactions/route.ts
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/transactions
-// opsional: ?summary=1  => ringkasan bulan berjalan
-//           ?from=YYYY-MM-DD&to=YYYY-MM-DD&category=...
+// Opsi:
+//   ?summary=1         → ringkasan bulan berjalan (income/out/balance)
+//   ?from=YYYY-MM-DD&to=YYYY-MM-DD&category=... → filter daftar
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -20,32 +21,36 @@ export async function GET(request: Request) {
         where: { date: { gte: start, lte: end } },
       });
 
-      const income = rows
-        .filter((r) => r.amountCents > 0)
-        .reduce((a, b) => a + b.amountCents, 0);
-      const expense = rows
-        .filter((r) => r.amountCents < 0)
-        .reduce((a, b) => a + Math.abs(b.amountCents), 0);
+      const sum = (arr: typeof rows, pred: (v: number) => boolean) =>
+        Math.round(
+          arr
+            .map((r) => r.amountCents / 100)
+            .filter((v) => pred(v))
+            .reduce((a, b) => a + Math.abs(b), 0),
+        );
+
+      const income = sum(rows, (v) => v > 0);
+      const expense = sum(rows, (v) => v < 0);
 
       return NextResponse.json({
-        in: Math.round(income / 100),
-        out: Math.round(expense / 100),
-        balance: Math.round((income - expense) / 100),
+        in: income,
+        out: expense,
+        balance: Math.round(income - expense),
       });
     }
 
-    // daftar transaksi (dengan filter opsional)
+    // daftar transaksi (optional filter)
     const where: any = {};
     const from = search.get('from');
     const to = search.get('to');
-    const cat = search.get('category');
+    const category = search.get('category');
 
     if (from || to) {
       where.date = {};
       if (from) where.date.gte = new Date(from);
       if (to) where.date.lte = new Date(to);
     }
-    if (cat) where.category = cat;
+    if (category) where.category = category;
 
     const rows = await prisma.transaction.findMany({
       where,
@@ -53,8 +58,9 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(rows);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'Server error' }, { status: 500 });
+  } catch (err) {
+    console.error('GET /api/transactions error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -64,12 +70,12 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       date: string;
       description: string;
-      category: string;
-      amount: number; // rupiah
+      category: 'Pendapatan' | 'Operasional' | 'Lainnya';
+      amount: number; // rupiah; negatif = pengeluaran
     };
 
-    if (!body?.date || !body?.description || !body?.category || typeof body?.amount !== 'number') {
-      return NextResponse.json({ error: 'Input tidak valid' }, { status: 400 });
+    if (!body?.date || !body?.description || !body?.category || typeof body.amount !== 'number') {
+      return NextResponse.json({ error: 'Payload tidak valid' }, { status: 400 });
     }
 
     const created = await prisma.transaction.create({
@@ -82,7 +88,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(created, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'Server error' }, { status: 500 });
+  } catch (err) {
+    console.error('POST /api/transactions error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

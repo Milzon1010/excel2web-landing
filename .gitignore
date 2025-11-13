@@ -7,3 +7,9 @@ dist/
 *.log
 .env*
 .DS_Store
+/app/generated/prisma
+# Prisma (keep dev.db tracked for demo)
+.prisma/
+# prisma/migrations/  <-- uncomment ini kalau TIDAK mau commit migrations
+prisma/dev.db
+prisma/dev.db-journal

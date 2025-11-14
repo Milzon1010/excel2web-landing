@@ -1,11 +1,13 @@
-﻿'use client';
+﻿// app/(finance)/finance/page.tsx
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import CircleStat from '@/components/CircleStat';
 
 type Tx = {
   id: number;
-  date: string;           // ISO
+  date: string; // ISO
   description: string;
   category: string;
   amountCents: number;
@@ -17,7 +19,8 @@ const CATEGORIES = ['Pendapatan', 'Operasional', 'Lainnya'] as const;
 
 type Summary = { in: number; out: number; balance: number };
 
-const fmtIDR = (n: number) => `Rp ${n.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+const fmtIDR = (n: number) =>
+  `Rp ${n.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
 
 // helper aman: cek status & content-type sebelum .json()
 async function fetchJSON<T>(url: string): Promise<T | null> {
@@ -38,9 +41,12 @@ export default function FinancePage() {
   const [summary, setSummary] = useState<Summary>({ in: 0, out: 0, balance: 0 });
 
   // form
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('Operasional');
+  const [category, setCategory] =
+    useState<(typeof CATEGORIES)[number]>('Operasional');
   const [amount, setAmount] = useState<string>('0');
 
   // filter
@@ -75,7 +81,7 @@ export default function FinancePage() {
 
   const canSubmit = useMemo(
     () => !!date && !!description && Number.isFinite(Number(amount)),
-    [date, description, amount]
+    [date, description, amount],
   );
 
   async function addTx() {
@@ -138,9 +144,18 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200">
       <div className="max-w-5xl px-4 py-8 mx-auto">
-        <h1 className="mb-6 text-2xl font-bold">Laporan Keuangan (demo)</h1>
+
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Laporan Keuangan (demo)</h1>
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+          >
+            ← Kembali ke Excel → Web-App
+          </Link>
+        </div>
 
         {/* KPI */}
         <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
@@ -169,7 +184,15 @@ export default function FinancePage() {
             valueText={fmtIDR(summary.balance)}
             percent={
               summary.in > 0
-                ? Math.max(0, Math.min(100, Math.round(((summary.in - summary.out) / summary.in) * 100)))
+                ? Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round(
+                        ((summary.in - summary.out) / summary.in) * 100,
+                      ),
+                    ),
+                  )
                 : summary.balance > 0
                 ? 100
                 : 0
@@ -313,14 +336,23 @@ export default function FinancePage() {
             <tbody className="divide-y divide-slate-100">
               {items.map((r) => (
                 <tr key={r.id}>
-                  <td className="p-3">{new Date(r.date).toLocaleDateString('id-ID')}</td>
+                  <td className="p-3">
+                    {new Date(r.date).toLocaleDateString('id-ID')}
+                  </td>
                   <td className="p-3">{r.description}</td>
                   <td className="p-3">{r.category}</td>
-                  <td className={`p-3 ${r.amountCents < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                  <td
+                    className={`p-3 ${
+                      r.amountCents < 0 ? 'text-rose-600' : 'text-slate-800'
+                    }`}
+                  >
                     {fmtIDR(Math.round(Math.abs(r.amountCents) / 100))}
                   </td>
                   <td className="p-3 text-right">
-                    <button onClick={() => remove(r.id)} className="text-rose-600 hover:underline">
+                    <button
+                      onClick={() => remove(r.id)}
+                      className="text-rose-600 hover:underline"
+                    >
                       Hapus
                     </button>
                   </td>
@@ -337,7 +369,9 @@ export default function FinancePage() {
           </table>
         </div>
 
-        {loading && <p className="mt-3 text-xs text-slate-400">Memuat…</p>}
+        {loading && (
+          <p className="mt-3 text-xs text-slate-400">Memuat…</p>
+        )}
       </div>
     </div>
   );
